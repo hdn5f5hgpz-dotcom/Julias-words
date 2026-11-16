@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mots Croisés Infinis — Python</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    background-size: 400% 400%; animation: gradientShift 15s ease infinite;
+    padding: 20px; overflow-x: hidden;
+  }
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .content { display: flex; flex-direction: column; align-items: center; width: 100%; }
+  .glow-title {
+    font-size: clamp(1.6rem, 4.5vw, 2.8rem); font-weight: 900; text-align: center;
+    background: linear-gradient(90deg, #ff6ec4, #7873f5, #4adede, #a8ff78, #ffd700, #ff6ec4);
+    background-size: 400% 100%;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    animation: shimmer 5s linear infinite;
+    filter: drop-shadow(0 0 20px rgba(120, 115, 245, 0.6));
+    margin-bottom: 8px;
+  }
+  @keyframes shimmer { 0% { background-position: 0% 50%; } 100% { background-position: 400% 50%; } }
+  .subtitle { color: #b8b5d8; font-size: 0.85rem; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 18px; }
+  .hud { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px; }
+  .stat {
+    background: rgba(255,255,255,0.06); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 16px;
+    padding: 8px 16px; color: #fff; text-align: center; min-width: 80px;
+  }
+  .stat .label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: #9d99c9; }
+  .stat .value { font-size: 1.3rem; font-weight: 700; }
+  .stat:nth-child(1) .value { color: #ff6ec4; }
+  .stat:nth-child(2) .value { color: #ffd700; }
+  .stat:nth-child(3) .value { color: #a8ff78; }
+  .stat:nth-child(4) .value { color: #ff9a3c; }
+  .stat:nth-child(5) .value { color: #4adede; }
+  .board-wrap {
+    position: relative; padding: 10px; border-radius: 24px;
+    background: rgba(255,255,255,0.04); backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .board-wrap::before {
+    content: ''; position: absolute; inset: -3px; border-radius: 26px;
+    background: linear-gradient(45deg, #ff6ec4, #7873f5, #4adede, #a8ff78, #ffd700, #ff6ec4);
+    background-size: 400% 400%; animation: shimmer 8s linear infinite;
+    z-index: -1; opacity: 0.7; filter: blur(10px);
+  }
+  #board { display: grid; gap: 2px; background: rgba(0,0,0,0.3); border-radius: 16px; padding: 5px; }
+  .cell {
+    width: clamp(22px, 4.5vw, 40px); height: clamp(22px, 4.5vw, 40px);
+    border-radius: 6px; background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: clamp(0.7rem, 2vw, 1.1rem);
+    color: #fff; position: relative; cursor: pointer; user-select: none;
+    transition: all 0.15s;
+  }
+  .cell.black { background: transparent; border-color: transparent; cursor: default; }
+  .cell.letter { box-shadow: inset 0 0 10px rgba(120,115,245,0.1); }
+  .cell.letter:hover { background: rgba(255,110,196,0.4); transform: scale(1.1); }
+  .cell.correct { background: linear-gradient(135deg, rgba(74,222,222,0.5), rgba(168,255,120,0.4)); border-color: #4adede; color: #4adede; }
+  .cell.wrong { background: rgba(255,110,196,0.35); border-color: #ff6ec4; color: #ff6ec4; }
+  .cell.revealed { background: rgba(255,215,0,0.3); color: #ffd700; border-color: #ffd700; }
+  .cell .num { position: absolute; top: 0; left: 2px; font-size: 0.45rem; color: #ffd700; }
+  .cell.active { outline: 2px solid #4adede; outline-offset: 1px; }
+  .clues { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 720px; width: 100%; margin-top: 18px; }
+  .clue-box {
+    background: rgba(255,255,255,0.06); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 16px;
+    padding: 12px 14px; color: #d8d6f0; font-size: 0.78rem; line-height: 1.5;
+    max-height: 160px; overflow-y: auto;
+  }
+  .clue-box h3 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+  .clue-box:nth-child(1) h3 { color: #ff6ec4; }
+  .clue-box:nth-child(2) h3 { color: #4adede; }
+  .clue-box ul { list-style: none; }
+  .clue-box li { padding: 3px 0; border-bottom: 1px dashed rgba(255,255,255,0.08); cursor: pointer; }
+  .clue-box li:hover { color: #ffd700; }
+  .clue-box li.current { color: #4adede; font-weight: 700; }
+  .controls { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    padding: 10px 22px; border-radius: 12px; border: none;
+    font-weight: 700; font-size: 0.82rem; letter-spacing: 1px;
+    cursor: pointer; text-transform: uppercase; transition: all 0.25s;
+  }
+  .btn-primary { background: linear-gradient(135deg, #ff6ec4, #7873f5, #4adede); color: #0f0c29; }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-secondary { background: rgba(255,255,255,0.08); color: #d8d6f0; border: 1px solid rgba(255,255,255,0.15); }
+  .btn-secondary:hover { background: rgba(168,255,120,0.2); border-color: #a8ff78; color: #a8ff78; }
+  .btn-danger { background: rgba(255,110,196,0.15); color: #ff6ec4; border: 1px solid rgba(255,110,196,0.4); }
+  .toast {
+    position: fixed; top: 30px; left: 50%; transform: translateX(-50%) translateY(-100px);
+    background: linear-gradient(135deg, #ff6ec4, #7873f5, #4adede);
+    color: #0f0c29; padding: 12px 28px; border-radius: 14px;
+    font-weight: 800; transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 1000; pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .keyboard-hint { color: #6d6a9e; font-size: 0.7rem; margin-top: 12px; text-align: center; }
+  .loading { color: #4adede; font-size: 1rem; margin: 20px; text-align: center; }
+  @media (max-width: 600px) { .clues { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="content">
+  <h1 class="glow-title">✦ JULIAS WORDS ✦</h1>
+  <p class="subtitle">L'Odyssée des Lettres</p>
+
+  <div class="hud">
+    <div class="stat"><div class="label">Niveau</div><div class="value" id="level">1</div></div>
+    <div class="stat"><div class="label">Score</div><div class="value" id="score">0</div></div>
+    <div class="stat"><div class="label">Indices</div><div class="value" id="hints">5</div></div>
+    <div class="stat"><div class="label">Grille</div><div class="value" id="size">–</div></div>
+    <div class="stat"><div class="label">Record</div><div class="value" id="best">0</div></div>
+  </div>
+
+  <div class="board-wrap"><div id="board"></div></div>
+  <div id="loading" class="loading">Génération de la grille…</div>
+
+  <div class="clues">
+    <div class="clue-box"><h3>Horizontal ➡</h3><ul id="across"></ul></div>
+    <div class="clue-box"><h3>Vertical ⬇</h3><ul id="down"></ul></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-primary" id="checkBtn">✓ Vérifier</button>
+    <button class="btn btn-secondary" id="hintBtn">💡 Indice</button>
+    <button class="btn btn-secondary" id="newBtn">🔄 Nouvelle grille</button>
+    <button class="btn btn-danger" id="resetBtn">🗑 Reset</button>
+  </div>
+
+  <p class="keyboard-hint">Cliquez sur une case · Tapez une lettre · Backspace pour effacer</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+//  ÉTAT
+// ============================================================
+const HINTS_PER_LEVEL = 5;
+const SAVE_KEY = 'motsCroisesPython_v1';
+
+let state = {
+  level: 0, score: 0, hints: HINTS_PER_LEVEL, best: 0,
+  puzzle: null, grid: [], userGrid: [], cells: [], entries: [],
+  activeEntry: null, selectedCell: null
+};
+
+const boardEl = document.getElementById('board');
+const acrossEl = document.getElementById('across');
+const downEl = document.getElementById('down');
+const loadingEl = document.getElementById('loading');
+
+// ============================================================
+//  CHARGEMENT DEPUIS L'API PYTHON
+// ============================================================
+async function loadLevel(levelIndex, restoreData = null) {
+  loadingEl.style.display = 'block';
+  boardEl.innerHTML = '';
+  acrossEl.innerHTML = '';
+  downEl.innerHTML = '';
+
+  try {
+    const res = await fetch(`/api/puzzle/${levelIndex}`);
+    const puzzle = await res.json();
+    state.level = levelIndex;
+    state.puzzle = puzzle;
+
+    const { size, words } = puzzle;
+
+    // Initialiser / restaurer
+    if (restoreData && restoreData.userGrid) {
+      state.hints = restoreData.hints;
+      state.userGrid = restoreData.userGrid;
+      if (state.userGrid.length !== size) {
+        const newGrid = Array.from({ length: size }, () => Array(size).fill(''));
+        for (let r = 0; r < Math.min(size, state.userGrid.length); r++)
+          for (let c = 0; c < Math.min(size, state.userGrid[r].length); c++)
+            newGrid[r][c] = state.userGrid[r][c] || '';
+        state.userGrid = newGrid;
+      }
+    } else {
+      state.hints = HINTS_PER_LEVEL;
+      state.userGrid = Array.from({ length: size }, () => Array(size).fill(''));
+    }
+
+    state.grid = Array.from({ length: size }, () => Array(size).fill(''));
+    state.cells = Array.from({ length: size }, () => Array(size).fill(null));
+    state.entries = [];
+    state.activeEntry = null;
+    state.selectedCell = null;
+
+    // Placer les lettres de solution
+    for (const w of words) {
+      for (let i = 0; i < w.answer.length; i++) {
+        const r = w.dir === 'H' ? w.r : w.r + i;
+        const c = w.dir === 'H' ? w.c + i : w.c;
+        if (r < size && c < size) state.grid[r][c] = w.answer[i];
+      }
+    }
+
+    // Numéroter les entrées
+    let num = 1;
+    const numbered = [];
+    for (const w of words) {
+      const existing = numbered.find(e => e.r === w.r && e.c === w.c);
+      const n = existing ? existing.number : num++;
+      if (!existing) numbered.push({ r: w.r, c: w.c, number: n });
+      state.entries.push({ ...w, number: n, cells: [] });
+    }
+
+    for (const e of state.entries) {
+      for (let i = 0; i < e.answer.length; i++) {
+        const r = e.dir === 'H' ? e.r : e.r + i;
+        const c = e.dir === 'H' ? e.c + i : e.c;
+        if (r < size && c < size) e.cells.push([r, c]);
+      }
+    }
+
+    render();
+    updateHUD();
+  } catch (err) {
+    console.error('Erreur chargement:', err);
+    loadingEl.textContent = 'Erreur de chargement. Vérifiez que le serveur Python tourne.';
+    return;
+  }
+
+  loadingEl.style.display = 'none';
+}
+
+// ============================================================
+//  RENDU
+// ============================================================
+function render() {
+  const { size } = state.puzzle;
+  boardEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+  boardEl.innerHTML = '';
+
+  const numMap = {};
+  for (const e of state.entries) {
+    const key = `${e.r},${e.c}`;
+    if (!numMap[key]) numMap[key] = e.number;
+  }
+
+  for (let r = 0; r < size; r++) {
+    state.cells[r] = [];
+    for (let c = 0; c < size; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+
+      if (state.grid[r][c]) {
+        cell.classList.add('letter');
+        if (numMap[`${r},${c}`]) {
+          const n = document.createElement('span');
+          n.className = 'num';
+          n.textContent = numMap[`${r},${c}`];
+          cell.appendChild(n);
+        }
+        const span = document.createElement('span');
+        span.className = 'val';
+        span.textContent = state.userGrid[r][c] || '';
+        cell.appendChild(span);
+
+        if (state.userGrid[r][c] && state.userGrid[r][c] === state.grid[r][c]) {
+          cell.classList.add('correct');
+          cell.dataset.checked = '1';
+        }
+
+        cell.addEventListener('click', () => selectCell(r, c));
+      } else {
+        cell.classList.add('black');
+      }
+
+      boardEl.appendChild(cell);
+      state.cells[r][c] = cell;
+    }
+  }
+
+  renderClues();
+}
+
+function renderClues() {
+  acrossEl.innerHTML = '';
+  downEl.innerHTML = '';
+
+  for (const e of state.entries) {
+    const li = document.createElement('li');
+    li.textContent = `${e.number}. ${e.clue} (${e.answer.length})`;
+    li.dataset.entry = state.entries.indexOf(e);
+    li.addEventListener('click', () => selectEntry(e));
+    if (e.dir === 'H') acrossEl.appendChild(li);
+    else downEl.appendChild(li);
+  }
+
+  highlightClue();
+}
+
+function highlightClue() {
+  document.querySelectorAll('.clue-box li').forEach(li => li.classList.remove('current'));
+  if (state.activeEntry) {
+    const idx = state.entries.indexOf(state.activeEntry);
+    const li = document.querySelector(`.clue-box li[data-entry="${idx}"]`);
+    if (li) li.classList.add('current');
+  }
+}
+
+// ============================================================
+//  SÉLECTION
+// ============================================================
+function selectCell(r, c) {
+  if (!state.grid[r][c]) return;
+  state.selectedCell = { r, c };
+
+  const candidates = state.entries.filter(e =>
+    e.cells.some(([er, ec]) => er === r && ec === c)
+  );
+  if (candidates.length === 0) return;
+
+  if (state.activeEntry && candidates.includes(state.activeEntry) && candidates.length > 1) {
+    state.activeEntry = candidates.find(e => e !== state.activeEntry);
+  } else if (!state.activeEntry || !candidates.includes(state.activeEntry)) {
+    state.activeEntry = candidates[0];
+  }
+
+  updateSelectionUI();
+}
+
+function selectEntry(entry) {
+  state.activeEntry = entry;
+  const firstEmpty = entry.cells.find(([r, c]) => !state.userGrid[r][c]);
+  const cell = firstEmpty || entry.cells[0];
+  state.selectedCell = { r: cell[0], c: cell[1] };
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  document.querySelectorAll('.cell').forEach(el => el.classList.remove('active'));
+  if (state.activeEntry) {
+    for (const [r, c] of state.activeEntry.cells) {
+      if (state.cells[r] && state.cells[r][c]) state.cells[r][c].classList.add('active');
+    }
+  }
+  highlightClue();
+}
+
+// ============================================================
+//  CLAVIER
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if (!state.selectedCell || !state.activeEntry) return;
+  const { r, c } = state.selectedCell;
+
+  if (e.key === 'Backspace') {
+    e.preventDefault();
+    state.userGrid[r][c] = '';
+    state.cells[r][c].querySelector('.val').textContent = '';
+    state.cells[r][c].classList.remove('correct', 'wrong', 'revealed');
+    delete state.cells[r][c].dataset.checked;
+    saveGame();
+    const idx = state.activeEntry.cells.findIndex(([er, ec]) => er === r && ec === c);
+    if (idx > 0) {
+      const [pr, pc] = state.activeEntry.cells[idx - 1];
+      state.selectedCell = { r: pr, c: pc };
+      updateSelectionUI();
+    }
+    return;
+  }
+
+  if (/^[A-Za-zÀ-ÿ]$/.test(e.key)) {
+    e.preventDefault();
+    const letter = e.key.toUpperCase();
+    state.userGrid[r][c] = letter;
+    state.cells[r][c].querySelector('.val').textContent = letter;
+    state.cells[r][c].classList.remove('correct', 'wrong', 'revealed');
+    delete state.cells[r][c].dataset.checked;
+    saveGame();
+
+    const idx = state.activeEntry.cells.findIndex(([er, ec]) => er === r && ec === c);
+    if (idx < state.activeEntry.cells.length - 1) {
+      const [nr, nc] = state.activeEntry.cells[idx + 1];
+      state.selectedCell = { r: nr, c: nc };
+      updateSelectionUI();
+    }
+  }
+});
+
+// ============================================================
+//  VÉRIFIER
+// ============================================================
+document.getElementById('checkBtn').addEventListener('click', () => {
+  let allFilled = true, newCorrect = 0, errors = 0;
+  const { size } = state.puzzle;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (!state.grid[r][c]) continue;
+      const val = state.userGrid[r][c];
+      const cellEl = state.cells[r][c];
+      cellEl.classList.remove('correct', 'wrong');
+      if (!val) { allFilled = false; continue; }
+      if (val === state.grid[r][c]) {
+        cellEl.classList.add('correct');
+        if (!cellEl.dataset.checked) { newCorrect++; cellEl.dataset.checked = '1'; }
+      } else {
+        cellEl.classList.add('wrong');
+        errors++;
+        setTimeout(() => cellEl.classList.remove('wrong'), 800);
+      }
+    }
+  }
+
+  if (newCorrect > 0) {
+    const gain = newCorrect * 10 * (state.level + 1);
+    state.score += gain;
+    showToast(`+${gain} points ! ${newCorrect} lettre(s) correcte(s)`);
+  } else if (errors > 0) {
+    showToast('❌ Des erreurs à corriger...');
+  }
+
+  updateHUD();
+  saveGame();
+
+  if (allFilled && isPuzzleComplete()) {
+    state.score += 100 * (state.level + 1);
+    if (state.score > state.best) state.best = state.score;
+    updateHUD();
+    saveGame();
+    showToast('🎉 Niveau réussi ! Génération du suivant...');
+    setTimeout(() => { loadLevel(state.level + 1); saveGame(); }, 1500);
+  } else if (allFilled && !isPuzzleComplete()) {
+    showToast('Presque... certaines lettres sont fausses.');
+  }
+});
+
+function isPuzzleComplete() {
+  const { size } = state.puzzle;
+  for (let r = 0; r < size; r++)
+    for (let c = 0; c < size; c++)
+      if (state.grid[r][c] && state.userGrid[r][c] !== state.grid[r][c]) return false;
+  return true;
+}
+
+// ============================================================
+//  INDICE
+// ============================================================
+document.getElementById('hintBtn').addEventListener('click', () => {
+  if (state.hints <= 0) { showToast("Plus d'indices disponibles !"); return; }
+  const { size } = state.puzzle;
+  const empty = [];
+  for (let r = 0; r < size; r++)
+    for (let c = 0; c < size; c++)
+      if (state.grid[r][c] && state.userGrid[r][c] !== state.grid[r][c])
+        empty.push([r, c]);
+
+  if (empty.length === 0) { showToast('Tout est déjà correct !'); return; }
+
+  let target = null;
+  if (state.activeEntry) {
+    target = state.activeEntry.cells.find(([r, c]) => state.grid[r][c] && state.userGrid[r][c] !== state.grid[r][c]);
+  }
+  if (!target) target = empty[Math.floor(Math.random() * empty.length)];
+
+  const [r, c] = target;
+  state.userGrid[r][c] = state.grid[r][c];
+  const el = state.cells[r][c];
+  el.querySelector('.val').textContent = state.grid[r][c];
+  el.classList.remove('wrong', 'correct');
+  el.classList.add('revealed');
+  el.dataset.checked = '1';
+
+  state.hints--;
+  state.score = Math.max(0, state.score - 15);
+  updateHUD();
+  saveGame();
+  showToast(`💡 Lettre révélée · ${state.hints} indice(s) restant(s)`);
+});
+
+// ============================================================
+//  NOUVELLE GRILLE / RESET
+// ============================================================
+document.getElementById('newBtn').addEventListener('click', async () => {
+  await fetch('/api/reset', { method: 'POST' });
+  loadLevel(state.level);
+  saveGame();
+  showToast('Nouvelle grille générée');
+});
+
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  if (!confirm('Effacer toute la progression sauvegardée ?')) return;
+  await fetch('/api/reset', { method: 'POST' });
+  localStorage.removeItem(SAVE_KEY);
+  state.score = 0;
+  state.best = 0;
+  loadLevel(0);
+  showToast('🗑 Sauvegarde effacée');
+});
+
+// ============================================================
+//  SAUVEGARDE (localStorage côté navigateur)
+// ============================================================
+function saveGame() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      level: state.level, score: state.score, hints: state.hints,
+      best: state.best, userGrid: state.userGrid, timestamp: Date.now()
+    }));
+  } catch (e) {}
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) { return null; }
+}
+
+// ============================================================
+//  HUD & TOAST
+// ============================================================
+function updateHUD() {
+  document.getElementById('level').textContent = state.level + 1;
+  document.getElementById('score').textContent = state.score;
+  document.getElementById('hints').textContent = state.hints;
+  document.getElementById('size').textContent = state.puzzle ? `${state.puzzle.size}×${state.puzzle.size}` : '–';
+  document.getElementById('best').textContent = state.best;
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ============================================================
+//  DÉMARRAGE
+// ============================================================
+(async function init() {
+  const saved = loadGame();
+  if (saved) {
+    state.score = saved.score || 0;
+    state.best = saved.best || 0;
+    state.best = Math.max(state.best, state.score);
+    await loadLevel(saved.level, saved);
+    showToast('💾 Progression restaurée !');
+  } else {
+    await loadLevel(0);
+  }
+  updateHUD();
+})();
+</script>
+</body>
+</html>
