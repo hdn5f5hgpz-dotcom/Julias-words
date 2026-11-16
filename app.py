@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+import os
 from flask import Flask, render_template, jsonify, request
 from generateur import generate_puzzle, reset_used_words
 
-app = Flask(__name__)
+app = Flask(_name, template_folder=os.path.join(os.path.dirname(os.path.abspath(file_)), 'templates'))
 
 
 @app.route('/')
