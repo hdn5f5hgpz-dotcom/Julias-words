@@ -2,130 +2,158 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mots Croisés Infinis — Python</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Julias Words</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  /* Optimisation pour mobile : tout sur un écran, pas de scroll */
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
   body {
-    min-height: 100vh; display: flex; flex-direction: column;
+    display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     font-family: 'Segoe UI', system-ui, sans-serif;
-    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-    background-size: 400% 400%; animation: gradientShift 15s ease infinite;
-    padding: 20px; overflow-x: hidden;
+    padding: 10px;
+    transition: background 0.8s ease;
   }
-  @keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+
+  /* ===== PAYSAGES VARIABLES ===== */
+  body.theme-0 { background: linear-gradient(135deg, #020b16, #06283d, #0d47a1); } /* Océan */
+  body.theme-1 { background: linear-gradient(135deg, #1a0b2e, #4a154b, #2b0b3a); } /* Violet */
+  body.theme-2 { background: linear-gradient(135deg, #0b1a10, #1d4a2b, #0a2a14); } /* Forêt */
+  body.theme-3 { background: linear-gradient(135deg, #2b1b17, #5c2e1e, #1f110e); } /* Terre */
+  body.theme-4 { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); } /* Nuit */
+
+  .content { 
+    display: flex; flex-direction: column; align-items: center; 
+    width: 100%; max-width: 600px; height: 100%; 
+    justify-content: space-evenly;
   }
-  .content { display: flex; flex-direction: column; align-items: center; width: 100%; }
+
   .glow-title {
-    font-size: clamp(1.6rem, 4.5vw, 2.8rem); font-weight: 900; text-align: center;
+    font-size: clamp(1.2rem, 5vw, 2rem); font-weight: 900; text-align: center;
     background: linear-gradient(90deg, #ff6ec4, #7873f5, #4adede, #a8ff78, #ffd700, #ff6ec4);
     background-size: 400% 100%;
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     animation: shimmer 5s linear infinite;
-    filter: drop-shadow(0 0 20px rgba(120, 115, 245, 0.6));
-    margin-bottom: 8px;
+    filter: drop-shadow(0 0 10px rgba(120, 115, 245, 0.6));
+    margin-bottom: 2px;
   }
   @keyframes shimmer { 0% { background-position: 0% 50%; } 100% { background-position: 400% 50%; } }
-  .subtitle { color: #b8b5d8; font-size: 0.85rem; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 18px; }
-  .hud { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 18px; }
+  
+  .subtitle { color: #b8b5d8; font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }
+  
+  /* HUD compact pour mobile */
+  .hud { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; }
   .stat {
     background: rgba(255,255,255,0.06); backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.15); border-radius: 16px;
-    padding: 8px 16px; color: #fff; text-align: center; min-width: 80px;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+    padding: 4px 8px; color: #fff; text-align: center; flex: 1; min-width: 50px;
   }
-  .stat .label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: #9d99c9; }
-  .stat .value { font-size: 1.3rem; font-weight: 700; }
+  .stat .label { font-size: 0.45rem; text-transform: uppercase; letter-spacing: 1px; color: #9d99c9; }
+  .stat .value { font-size: 1rem; font-weight: 700; }
   .stat:nth-child(1) .value { color: #ff6ec4; }
   .stat:nth-child(2) .value { color: #ffd700; }
   .stat:nth-child(3) .value { color: #a8ff78; }
   .stat:nth-child(4) .value { color: #ff9a3c; }
   .stat:nth-child(5) .value { color: #4adede; }
+  
   .board-wrap {
-    position: relative; padding: 10px; border-radius: 24px;
+    position: relative; padding: 4px; border-radius: 12px;
     background: rgba(255,255,255,0.04); backdrop-filter: blur(16px);
     border: 1px solid rgba(255,255,255,0.12);
+    margin: 5px 0;
   }
   .board-wrap::before {
-    content: ''; position: absolute; inset: -3px; border-radius: 26px;
+    content: ''; position: absolute; inset: -2px; border-radius: 14px;
     background: linear-gradient(45deg, #ff6ec4, #7873f5, #4adede, #a8ff78, #ffd700, #ff6ec4);
     background-size: 400% 400%; animation: shimmer 8s linear infinite;
-    z-index: -1; opacity: 0.7; filter: blur(10px);
+    z-index: -1; opacity: 0.5; filter: blur(5px);
   }
-  #board { display: grid; gap: 2px; background: rgba(0,0,0,0.3); border-radius: 16px; padding: 5px; }
+  
+  #board { display: grid; gap: 1px; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 2px; }
+  
+  /* Cases plus petites pour tout faire tenir */
   .cell {
-    width: clamp(22px, 4.5vw, 40px); height: clamp(22px, 4.5vw, 40px);
-    border-radius: 6px; background: rgba(255,255,255,0.08);
+    width: clamp(20px, 6vw, 35px); height: clamp(20px, 6vw, 35px);
+    border-radius: 4px; background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.1);
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: clamp(0.7rem, 2vw, 1.1rem);
+    font-weight: 700; font-size: clamp(0.6rem, 2.5vw, 1rem);
     color: #fff; position: relative; cursor: pointer; user-select: none;
-    transition: all 0.15s;
   }
   .cell.black { background: transparent; border-color: transparent; cursor: default; }
-  .cell.letter { box-shadow: inset 0 0 10px rgba(120,115,245,0.1); }
-  .cell.letter:hover { background: rgba(255,110,196,0.4); transform: scale(1.1); }
-  .cell.correct { background: linear-gradient(135deg, rgba(74,222,222,0.5), rgba(168,255,120,0.4)); border-color: #4adede; color: #4adede; }
+  .cell.letter { box-shadow: inset 0 0 5px rgba(120,115,245,0.1); }
+  .cell.letter:hover { background: rgba(255,110,196,0.4); }
+  .cell.correct { background: linear-gradient(135deg, rgba(74,222,222,0.5), rgba(168,255,120,0.4)); border-color: #4adede; color: #fff; }
   .cell.wrong { background: rgba(255,110,196,0.35); border-color: #ff6ec4; color: #ff6ec4; }
   .cell.revealed { background: rgba(255,215,0,0.3); color: #ffd700; border-color: #ffd700; }
-  .cell .num { position: absolute; top: 0; left: 2px; font-size: 0.45rem; color: #ffd700; }
-  .cell.active { outline: 2px solid #4adede; outline-offset: 1px; }
-  .clues { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 720px; width: 100%; margin-top: 18px; }
+  .cell .num { position: absolute; top: 0; left: 1px; font-size: 0.35rem; color: #ffd700; }
+  .cell.active { outline: 2px solid #4adede; outline-offset: 0px; z-index: 2; }
+  
+  /* Indices compacts */
+  .clues { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
   .clue-box {
     background: rgba(255,255,255,0.06); backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.12); border-radius: 16px;
-    padding: 12px 14px; color: #d8d6f0; font-size: 0.78rem; line-height: 1.5;
-    max-height: 160px; overflow-y: auto;
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+    padding: 6px; color: #d8d6f0; font-size: 0.6rem; line-height: 1.2;
+    height: 70px; overflow-y: auto;
   }
-  .clue-box h3 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+  .clue-box h3 { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
   .clue-box:nth-child(1) h3 { color: #ff6ec4; }
   .clue-box:nth-child(2) h3 { color: #4adede; }
   .clue-box ul { list-style: none; }
-  .clue-box li { padding: 3px 0; border-bottom: 1px dashed rgba(255,255,255,0.08); cursor: pointer; }
-  .clue-box li:hover { color: #ffd700; }
+  .clue-box li { padding: 1px 0; border-bottom: 1px dashed rgba(255,255,255,0.08); cursor: pointer; }
   .clue-box li.current { color: #4adede; font-weight: 700; }
-  .controls { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
+  
+  /* Boutons compacts */
+  .controls { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; }
   .btn {
-    padding: 10px 22px; border-radius: 12px; border: none;
-    font-weight: 700; font-size: 0.82rem; letter-spacing: 1px;
-    cursor: pointer; text-transform: uppercase; transition: all 0.25s;
+    padding: 8px 10px; border-radius: 8px; border: none;
+    font-weight: 700; font-size: 0.65rem; letter-spacing: 1px;
+    cursor: pointer; text-transform: uppercase; transition: all 0.25s; flex: 1;
   }
   .btn-primary { background: linear-gradient(135deg, #ff6ec4, #7873f5, #4adede); color: #0f0c29; }
-  .btn-primary:hover { transform: translateY(-2px); }
   .btn-secondary { background: rgba(255,255,255,0.08); color: #d8d6f0; border: 1px solid rgba(255,255,255,0.15); }
-  .btn-secondary:hover { background: rgba(168,255,120,0.2); border-color: #a8ff78; color: #a8ff78; }
   .btn-danger { background: rgba(255,110,196,0.15); color: #ff6ec4; border: 1px solid rgba(255,110,196,0.4); }
+  
   .toast {
-    position: fixed; top: 30px; left: 50%; transform: translateX(-50%) translateY(-100px);
+    position: fixed; top: 10px; left: 50%; transform: translateX(-50%) translateY(-100px);
     background: linear-gradient(135deg, #ff6ec4, #7873f5, #4adede);
-    color: #0f0c29; padding: 12px 28px; border-radius: 14px;
-    font-weight: 800; transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    color: #0f0c29; padding: 8px 16px; border-radius: 10px;
+    font-weight: 800; font-size: 0.8rem; transition: transform 0.4s ease;
     z-index: 1000; pointer-events: none;
   }
   .toast.show { transform: translateX(-50%) translateY(0); }
-  .keyboard-hint { color: #6d6a9e; font-size: 0.7rem; margin-top: 12px; text-align: center; }
-  .loading { color: #4adede; font-size: 1rem; margin: 20px; text-align: center; }
-  @media (max-width: 600px) { .clues { grid-template-columns: 1fr; } }
+  
+  .loading { color: #4adede; font-size: 0.8rem; text-align: center; }
 </style>
 </head>
-<body>
+<body class="theme-4">
 
 <div class="content">
-  <h1 class="glow-title">✦ JULIAS WORDS ✦</h1>
-  <p class="subtitle">L'Odyssée des Lettres</p>
+  <div>
+    <h1 class="glow-title">✦ JULIAS WORDS ✦</h1>
+    <p class="subtitle">L'Odyssée des Lettres</p>
+  </div>
 
   <div class="hud">
     <div class="stat"><div class="label">Niveau</div><div class="value" id="level">1</div></div>
     <div class="stat"><div class="label">Score</div><div class="value" id="score">0</div></div>
     <div class="stat"><div class="label">Indices</div><div class="value" id="hints">5</div></div>
-    <div class="stat"><div class="label">Grille</div><div class="value" id="size">–</div></div>
+    <div class="stat"><div class="label">Grille</div><div class="value" id="size">7x7</div></div>
     <div class="stat"><div class="label">Record</div><div class="value" id="best">0</div></div>
   </div>
 
-  <div class="board-wrap"><div id="board"></div></div>
+  <div class="board-wrap">
+    <div id="board"></div>
+    <!-- CHAMP INVISIBLE POUR LE CLAVIER MOBILE -->
+    <input type="text" id="hiddenInput" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="position: absolute; opacity: 0; height: 1px; width: 1px; bottom: 0; left: 50%;">
+  </div>
   <div id="loading" class="loading">Génération de la grille…</div>
 
   <div class="clues">
@@ -136,21 +164,16 @@
   <div class="controls">
     <button class="btn btn-primary" id="checkBtn">✓ Vérifier</button>
     <button class="btn btn-secondary" id="hintBtn">💡 Indice</button>
-    <button class="btn btn-secondary" id="newBtn">🔄 Nouvelle grille</button>
+    <button class="btn btn-secondary" id="newBtn">🔄 Nouveau</button>
     <button class="btn btn-danger" id="resetBtn">🗑 Reset</button>
   </div>
-
-  <p class="keyboard-hint">Cliquez sur une case · Tapez une lettre · Backspace pour effacer</p>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ============================================================
-//  ÉTAT
-// ============================================================
 const HINTS_PER_LEVEL = 5;
-const SAVE_KEY = 'motsCroisesPython_v1';
+const SAVE_KEY = 'juliasWords_v1';
 
 let state = {
   level: 0, score: 0, hints: HINTS_PER_LEVEL, best: 0,
@@ -162,15 +185,54 @@ const boardEl = document.getElementById('board');
 const acrossEl = document.getElementById('across');
 const downEl = document.getElementById('down');
 const loadingEl = document.getElementById('loading');
+const hiddenInput = document.getElementById('hiddenInput');
 
-// ============================================================
-//  CHARGEMENT DEPUIS L'API PYTHON
-// ============================================================
+// Fonction pour forcer le clavier sur mobile
+function openMobileKeyboard() {
+  hiddenInput.focus();
+  hiddenInput.value = ''; // Réinitialiser
+}
+
+// Écouter la saisie sur le champ caché (pour mobile)
+hiddenInput.addEventListener('input', (e) => {
+  if (!state.selectedCell || !state.activeEntry) return;
+  const val = e.target.value;
+  if (val) {
+    // Simuler l'appui sur une touche
+    const letter = val.slice(-1).toUpperCase();
+    if (/^[A-Z]$/.test(letter)) {
+      handleLetterInput(letter);
+    }
+    e.target.value = ''; // Vider le champ pour la prochaine lettre
+  }
+});
+
+// Gérer la saisie d'une lettre (utilisé par le clavier physique ET mobile)
+function handleLetterInput(letter) {
+  const { r, c } = state.selectedCell;
+  state.userGrid[r][c] = letter;
+  state.cells[r][c].querySelector('.val').textContent = letter;
+  state.cells[r][c].classList.remove('correct', 'wrong', 'revealed');
+  delete state.cells[r][c].dataset.checked;
+  saveGame();
+
+  const idx = state.activeEntry.cells.findIndex(([er, ec]) => er === r && ec === c);
+  if (idx < state.activeEntry.cells.length - 1) {
+    const [nr, nc] = state.activeEntry.cells[idx + 1];
+    state.selectedCell = { r: nr, c: nc };
+    updateSelectionUI();
+  }
+}
+
 async function loadLevel(levelIndex, restoreData = null) {
   loadingEl.style.display = 'block';
   boardEl.innerHTML = '';
   acrossEl.innerHTML = '';
   downEl.innerHTML = '';
+
+  // Changement de paysage
+  document.body.className = '';
+  document.body.classList.add('theme-' + (levelIndex % 5));
 
   try {
     const res = await fetch(`/api/puzzle/${levelIndex}`);
@@ -180,7 +242,6 @@ async function loadLevel(levelIndex, restoreData = null) {
 
     const { size, words } = puzzle;
 
-    // Initialiser / restaurer
     if (restoreData && restoreData.userGrid) {
       state.hints = restoreData.hints;
       state.userGrid = restoreData.userGrid;
@@ -202,7 +263,6 @@ async function loadLevel(levelIndex, restoreData = null) {
     state.activeEntry = null;
     state.selectedCell = null;
 
-    // Placer les lettres de solution
     for (const w of words) {
       for (let i = 0; i < w.answer.length; i++) {
         const r = w.dir === 'H' ? w.r : w.r + i;
@@ -211,7 +271,6 @@ async function loadLevel(levelIndex, restoreData = null) {
       }
     }
 
-    // Numéroter les entrées
     let num = 1;
     const numbered = [];
     for (const w of words) {
@@ -233,16 +292,13 @@ async function loadLevel(levelIndex, restoreData = null) {
     updateHUD();
   } catch (err) {
     console.error('Erreur chargement:', err);
-    loadingEl.textContent = 'Erreur de chargement. Vérifiez que le serveur Python tourne.';
+    loadingEl.textContent = 'Erreur de chargement.';
     return;
   }
 
   loadingEl.style.display = 'none';
 }
 
-// ============================================================
-//  RENDU
-// ============================================================
 function render() {
   const { size } = state.puzzle;
   boardEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
@@ -289,7 +345,6 @@ function render() {
       state.cells[r][c] = cell;
     }
   }
-
   renderClues();
 }
 
@@ -305,7 +360,6 @@ function renderClues() {
     if (e.dir === 'H') acrossEl.appendChild(li);
     else downEl.appendChild(li);
   }
-
   highlightClue();
 }
 
@@ -318,12 +372,10 @@ function highlightClue() {
   }
 }
 
-// ============================================================
-//  SÉLECTION
-// ============================================================
 function selectCell(r, c) {
   if (!state.grid[r][c]) return;
   state.selectedCell = { r, c };
+  openMobileKeyboard(); // Ouvre le clavier sur mobile
 
   const candidates = state.entries.filter(e =>
     e.cells.some(([er, ec]) => er === r && ec === c)
@@ -335,7 +387,6 @@ function selectCell(r, c) {
   } else if (!state.activeEntry || !candidates.includes(state.activeEntry)) {
     state.activeEntry = candidates[0];
   }
-
   updateSelectionUI();
 }
 
@@ -344,6 +395,7 @@ function selectEntry(entry) {
   const firstEmpty = entry.cells.find(([r, c]) => !state.userGrid[r][c]);
   const cell = firstEmpty || entry.cells[0];
   state.selectedCell = { r: cell[0], c: cell[1] };
+  openMobileKeyboard(); // Ouvre le clavier sur mobile
   updateSelectionUI();
 }
 
@@ -357,9 +409,7 @@ function updateSelectionUI() {
   highlightClue();
 }
 
-// ============================================================
-//  CLAVIER
-// ============================================================
+// Clavier physique (PC)
 document.addEventListener('keydown', (e) => {
   if (!state.selectedCell || !state.activeEntry) return;
   const { r, c } = state.selectedCell;
@@ -382,25 +432,10 @@ document.addEventListener('keydown', (e) => {
 
   if (/^[A-Za-zÀ-ÿ]$/.test(e.key)) {
     e.preventDefault();
-    const letter = e.key.toUpperCase();
-    state.userGrid[r][c] = letter;
-    state.cells[r][c].querySelector('.val').textContent = letter;
-    state.cells[r][c].classList.remove('correct', 'wrong', 'revealed');
-    delete state.cells[r][c].dataset.checked;
-    saveGame();
-
-    const idx = state.activeEntry.cells.findIndex(([er, ec]) => er === r && ec === c);
-    if (idx < state.activeEntry.cells.length - 1) {
-      const [nr, nc] = state.activeEntry.cells[idx + 1];
-      state.selectedCell = { r: nr, c: nc };
-      updateSelectionUI();
-    }
+    handleLetterInput(e.key.toUpperCase());
   }
 });
 
-// ============================================================
-//  VÉRIFIER
-// ============================================================
 document.getElementById('checkBtn').addEventListener('click', () => {
   let allFilled = true, newCorrect = 0, errors = 0;
   const { size } = state.puzzle;
@@ -439,7 +474,7 @@ document.getElementById('checkBtn').addEventListener('click', () => {
     if (state.score > state.best) state.best = state.score;
     updateHUD();
     saveGame();
-    showToast('🎉 Niveau réussi ! Génération du suivant...');
+    showToast('🎉 Niveau réussi !');
     setTimeout(() => { loadLevel(state.level + 1); saveGame(); }, 1500);
   } else if (allFilled && !isPuzzleComplete()) {
     showToast('Presque... certaines lettres sont fausses.');
@@ -454,11 +489,8 @@ function isPuzzleComplete() {
   return true;
 }
 
-// ============================================================
-//  INDICE
-// ============================================================
 document.getElementById('hintBtn').addEventListener('click', () => {
-  if (state.hints <= 0) { showToast("Plus d'indices disponibles !"); return; }
+  if (state.hints <= 0) { showToast("Plus d'indices !"); return; }
   const { size } = state.puzzle;
   const empty = [];
   for (let r = 0; r < size; r++)
@@ -466,7 +498,7 @@ document.getElementById('hintBtn').addEventListener('click', () => {
       if (state.grid[r][c] && state.userGrid[r][c] !== state.grid[r][c])
         empty.push([r, c]);
 
-  if (empty.length === 0) { showToast('Tout est déjà correct !'); return; }
+  if (empty.length === 0) { showToast('Tout est correct !'); return; }
 
   let target = null;
   if (state.activeEntry) {
@@ -486,12 +518,9 @@ document.getElementById('hintBtn').addEventListener('click', () => {
   state.score = Math.max(0, state.score - 15);
   updateHUD();
   saveGame();
-  showToast(`💡 Lettre révélée · ${state.hints} indice(s) restant(s)`);
+  showToast(`💡 Lettre révélée · ${state.hints} restant(s)`);
 });
 
-// ============================================================
-//  NOUVELLE GRILLE / RESET
-// ============================================================
 document.getElementById('newBtn').addEventListener('click', async () => {
   await fetch('/api/reset', { method: 'POST' });
   loadLevel(state.level);
@@ -509,9 +538,6 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
   showToast('🗑 Sauvegarde effacée');
 });
 
-// ============================================================
-//  SAUVEGARDE (localStorage côté navigateur)
-// ============================================================
 function saveGame() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
@@ -529,9 +555,6 @@ function loadGame() {
   } catch (e) { return null; }
 }
 
-// ============================================================
-//  HUD & TOAST
-// ============================================================
 function updateHUD() {
   document.getElementById('level').textContent = state.level + 1;
   document.getElementById('score').textContent = state.score;
@@ -546,20 +569,16 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-// ============================================================
-//  DÉMARRAGE
-// ============================================================
 (async function init() {
   const saved = loadGame();
   if (saved) {
     state.score = saved.score || 0;
     state.best = saved.best || 0;
-    state.best = Math.max(state.best, state.score);
+    state.best = Math.max(state.best, saved.score);
     await loadLevel(saved.level, saved);
-    showToast('💾 Progression restaurée !');
   } else {
     await loadLevel(0);
   }
